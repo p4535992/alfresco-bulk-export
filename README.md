@@ -58,3 +58,6 @@ log4j.logger.org.alfresco.extensions.bulkexport.controler.Engine=INFO
 log4j.logger.org.alfresco.extensions.bulkexport.dao.AlfrescoExportDaoImpl=ERROR
 log4j.logger.org.alfresco.extensions.bulkexport.model.FileFolder=ERROR
 log4j.logger.org.alfresco.extensions.bulkexport.Export=INFO
+
+
+## 2019-06-13 MERGED FUNCTIONALITY FOR ACP FROM (https://github.com/atolcd/alfresco-share-import-export/network/members)

@@ -1,0 +1,5 @@
+<webscript>
+	<shortname>Form Bulk Export</shortname>
+	<description>Form Bulk Export</description>
+	<url>/modules/bulkExport</url>
+</webscript>

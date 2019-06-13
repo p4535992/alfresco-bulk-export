@@ -1,0 +1,65 @@
+<extension>
+    <modules>
+        <module>
+            <id>bulk-export-extension</id>
+            <version>1.0</version>
+			<auto-deploy>true</auto-deploy>
+            <configurations>
+                
+                <config evaluator="string-compare" condition="DocumentLibrary">  
+					<multi-select>
+				         <action type="action-link" id="onActionBulkExport" 
+				         	label="bulk-export-action.menu.selected-items" 
+				         	asset="document" 
+				         	permission="Write"/>
+			      	</multi-select>
+
+                </config>
+				
+                <config evaluator="string-compare" condition="DocLibActions">
+                    <actions>
+						<action id="bulk-export-action" icon="bulk-export-action"
+							type="javascript" label="bulk-export-action.label">	
+							  						
+							<param name="function">onActionBulkExport</param>
+							<param name="mode">create</param>
+							<param name="destination">{node.nodeRef}</param>
+							<param name="successMessage">bulk-export-action.msg.success</param>
+							<param name="failureMessage">bulk-export-action.msg.failure</param>							
+							<permissions>
+								<permission allow="true">Write</permission>
+							</permissions>
+						</action>						
+                    </actions>
+
+                    <actionGroups>
+                        <!-- We want the doclib actions to be visible in the
+                             document-browse and document-details views. -->
+                        <actionGroup id="document-browse">                       
+                       		 <action index="400" id="bulk-export-action" subgroup="110"/>
+                        </actionGroup>
+                        <actionGroup id="document-details">
+                       		 <action index="400" id="bulk-export-action" subgroup="110"/>
+                        </actionGroup>      
+                        <!-- Action is visible for links to documents on the Browse page -->
+			            <actionGroup id="document-link-browse">
+					         <action index="400" id="bulk-export-action" subgroup="110"/>
+					    </actionGroup>
+					    <!-- Action is visible for link to document on the Document Details page -->
+					    <actionGroup id="document-link-details">
+					         <action index="400" id="bulk-export-action" subgroup="110"/>
+					    </actionGroup>                 
+                    </actionGroups>
+                </config>
+
+				<config evaluator="string-compare" condition="DocLibCustom">
+					<dependencies>						
+						<css src="/bulk-export/bulk-export-action.css"/>
+						<js src="/bulk-export/bulk-export-action.js" />
+					</dependencies>
+				</config>
+            </configurations>
+
+        </module>
+    </modules>
+</extension>
