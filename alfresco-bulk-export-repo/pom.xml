@@ -20,7 +20,7 @@
         <timestamp>${maven.build.timestamp}</timestamp>
 		<maven.build.timestamp.format>yyyyMMdd.HHmmss</maven.build.timestamp.format>
   	</properties>
-  	
+
    <!-- Here we realize the connection with the Alfresco selected platform 
         (e.g.version and edition) -->
     <dependencyManagement>
@@ -37,13 +37,6 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-            <dependency>
-				<groupId>org.alfresco</groupId>
-				<artifactId>alfresco-repository</artifactId>	
-				<version>${alfresco.platform.version}</version>
-				<type>pom</type>
-                <scope>import</scope>	
-			</dependency>
         </dependencies>
     </dependencyManagement>
 	
@@ -80,28 +73,19 @@
 			</exclusions>	
 			<scope>provided</scope>		
 		</dependency>
-
      	<dependency>
             <groupId>com.ibm.icu</groupId>
             <artifactId>icu4j</artifactId>
             <version>3.6.1</version>
             <scope>provided</scope>
         </dependency>
-		<!-- 
-        <dependency>
-            <groupId>acegisecurity</groupId>
-            <artifactId>acegi-security</artifactId>
-            <version>0.8.2</version>
-            <scope>provided</scope>
-		</dependency>
-		-->
 		<dependency>
 			  <groupId>org.acegisecurity</groupId>
 			  <artifactId>acegi-security</artifactId>
 			  <version>0.8.2_patched</version>
 			  <scope>provided</scope>
 		</dependency>
-		
+		<!-- unzip -a alfresco-file-transfer-receiver-6.3-SNAPSHOT.zip -d /opt/alfresco-file-transfer-receiver-6.3-SNAPSHOT -->
     </dependencies>
 
     <build>
@@ -301,6 +285,25 @@
         <url>https://github.com/Alfresco/alfresco-bulk-export</url>
         <tag>HEAD</tag>
     </scm>
+    
+    <repositories>
+		<repository>
+	        <id>alfresco-public-repositories</id>
+	        <url>https://artifacts.alfresco.com/nexus/content/repositories/public/</url>
+	    </repository>
+		<repository>
+	        <id>alfresco-public</id>
+	        <url>https://artifacts.alfresco.com/nexus/content/groups/public</url>
+	    </repository>
+	    <repository>
+	        <id>alfresco-public-snapshot</id>
+	        <url>https://artifacts.alfresco.com/nexus/content/groups/public-snapshots</url>
+	    </repository>
+	    <repository>
+	        <id>alfresco-private-repository</id>
+	        <url>https://artifacts.alfresco.com/nexus/content/groups/private</url>
+	    </repository>
+    </repositories>
 
     <distributionManagement>
         <repository>

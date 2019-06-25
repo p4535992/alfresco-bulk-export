@@ -113,7 +113,7 @@ public class NodeExportTask implements Callable<String> {
             properties = this.dao.getPropertiesAsString(file);
 
             //Create Files
-            this.fileFolder.insertFileProperties(type, aspects, properties, path);
+            this.fileFolder.insertFileProperties(file,type, aspects, properties, path,null);
             type = null;
             properties = null;
             aspects = null;
@@ -142,7 +142,7 @@ public class NodeExportTask implements Callable<String> {
 
         //Create Folder and XMl Metadata
         this.fileFolder.createFolder(path);
-        this.fileFolder.insertFileProperties(type, aspects, properties, path);
+        this.fileFolder.insertFileProperties(folder,type, aspects, properties, path,null);
     }
 
     private void exportHeadRevision(NodeRef nodeRef) throws Exception {

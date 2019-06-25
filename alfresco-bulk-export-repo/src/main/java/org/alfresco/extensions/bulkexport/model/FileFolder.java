@@ -16,6 +16,29 @@
  */
 package org.alfresco.extensions.bulkexport.model;
 
+import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+
+import org.alfresco.service.ServiceRegistry;
+import org.alfresco.service.cmr.dictionary.PropertyDefinition;
+import org.alfresco.service.cmr.repository.NodeRef;
+import org.alfresco.service.cmr.repository.datatype.DefaultTypeConverter;
+import org.alfresco.service.namespace.QName;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.extensions.webscripts.WebScriptResponse;
@@ -28,11 +51,21 @@ import java.util.Set;
 
 /**
  * This class manage the files and folders creation
- *
+ * 
  * @author Denys G. Santos (gsdenys@gmail.com)
  * @version 1.0.1
  */
-public class FileFolder {
+public class FileFolder 
+{
+	// XML 1.0
+	// #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]
+	public static String XML10PATTERN = "[^"
+            + "\u0009\r\n"
+            + "\u0020-\uD7FF"
+            + "\uE000-\uFFFD"
+            + "\ud800\udc00-\udbff\udfff"
+            + "]";
+	
     Log log = LogFactory.getLog(FileFolder.class);
 
     /** {@link String} interface to web page for displaying messages
@@ -44,15 +77,41 @@ public class FileFolder {
      *  server
      */
     private String basePath;
-
+    
     /** {@link Boolean} value to avaliate if ovewrite content 
      * exported or no 
      */
     private boolean scapeExported;
-
+    private ServiceRegistry serviceRegistry;
+    private Set<String> invalidEmptyProps = new HashSet<String>();
+    private Set<String> processedTypesAndAspects = new HashSet<String>();
+    private StringBuilder parentLogger = null;
+    private List<String> customAspects = null;
+    private Map<String, String> customProperties = null;
+    private Map<String, String> updateTypesOrAspectsOrProperties = null;
+    private Map<String, String> updateModelPrefix = null;
+    
     /**
      * File Folder default builder
-     *
+     * 
+     * @param basePath
+     */
+    public FileFolder(String basePath, String aspects, String properties, String updateTypesOrAspectsOrProperties, String updateModelPrefix, boolean scapeExported, ServiceRegistry serviceRegistry, StringBuilder parentLogger) 
+    {
+        log.debug("debug enabled for FileFolder");
+        this.basePath = basePath;
+        this.customAspects = getAspectsList(aspects);
+        this.customProperties = getMapFromString(properties);
+        this.updateTypesOrAspectsOrProperties = getMapFromString(updateTypesOrAspectsOrProperties);
+        this.updateModelPrefix = getMapFromString(updateModelPrefix);
+        this.scapeExported = scapeExported;
+        this.serviceRegistry = serviceRegistry;
+        this.parentLogger = parentLogger;
+    }
+   
+    /**
+     * File Folder default builder
+     * 
      * @param basePath
      */
     public FileFolder(WebScriptResponse ui, String basePath, boolean scapeExported) {
@@ -67,8 +126,30 @@ public class FileFolder {
         this.basePath = basePath;
     }
 
-    public String basePath() {
+    public String basePath()
+    {
         return this.basePath;
+    }
+    
+    public List<String> getAspectsList(String aspects) {
+    	if(null != aspects && !aspects.isEmpty()) {
+	    	List<String> items = Arrays.asList(aspects.split("\\s*,\\s*"));
+	    	return new ArrayList<String>(items);
+    	}
+    	return null;
+    }
+    
+    public Map<String, String> getMapFromString(String properties) {
+    	if(null != properties && !properties.isEmpty()) {
+	    	List<String> items = Arrays.asList(properties.split("\\s*,\\s*"));
+	    	Map<String, String> props = new HashMap<String, String>();
+	    	for(String item : items) {
+	    		String[] propTokens = item.split("\\s*=\\s*");
+	    		props.put(propTokens[0], propTokens[1]);
+	    	}
+	    	return props;
+    	}
+    	return null;
     }
 
     /**
@@ -129,8 +210,8 @@ public class FileFolder {
         }
         log.debug("createFile filepath done" + f.getName());
     }
-
-
+    
+    
     /**
      * Create XML File
      *
@@ -146,10 +227,27 @@ public class FileFolder {
         return fp;
     }
 
-
+   /**
+     * Create XML File
+     * 
+     * @param filePath Path of file
+     * @return {@link String} Name of file
+     * @throws Exception
+     */
+    private String createXmlFile(String filePath, String revision) throws Exception 
+    {
+        String postfix = (null != revision && !revision.isEmpty())?".v"+revision:"";
+        String fp = filePath + ".metadata.properties.xml"+postfix;
+        
+        this.createFile(fp);
+        
+        return fp;
+    }
+    
+    
     /**
      * create content file
-     *
+     * 
      * @param content
      * @param filePath
      * @throws IOException
@@ -222,14 +320,81 @@ public class FileFolder {
      * @param filePath The path of file
      * @throws Exception
      */
-    public void insertFileProperties(String type, List<String> aspects, Map<String, String> properties, String filePath) throws Exception {
+    public void insertFileProperties(NodeRef nodeRef, String type, List<String> aspects,Map<String, String> properties, String filePath, String revision) throws Exception
+    {
         filePath = this.basePath + filePath;
+
 
         if (this.isFileExist(filePath) && this.isFileExist(filePath + ".metadata.properties.xml") && this.scapeExported) {
             log.debug("Following metadata file is not created :" + filePath);
             return;
         }
-
+        if(null == revision) {
+	        if(this.isFileExist(filePath) && this.isFileExist(filePath + ".metadata.properties.xml") && this.scapeExported)
+	        {
+	            return;
+	        }
+        } else {
+	        if(this.isFileExist(filePath) && this.isFileExist(filePath + ".metadata.properties.xml"+".v"+revision) && this.scapeExported)
+	        {
+	            return;
+	        }
+        }
+       
+        // ZIA - START
+        /* Alfresco 4.x has a bug that gets empty date when getting all versions. 
+         * It works as expected when we export only the head version.
+         * The method below stores all date properties and checks before writing to xml
+         */
+        this.setInvalidTypeProperties(nodeRef, type, aspects);
+        
+        /*
+         * We are not going to check the attributes of the custom aspects, 
+         * because they might not exist in the current system. We only want to add the
+         * aspects and properties to be used in the importing system
+         */
+        if(null != aspects && (null != this.customAspects && !this.customAspects.isEmpty())) {
+        	aspects.addAll(this.customAspects);
+        }
+        if(null != properties && (null != this.customProperties && !this.customProperties.isEmpty())) {
+        	for(Entry<String, String> prop : this.customProperties.entrySet()) {
+        		/*
+        		 * If we want to get the value from an existing property
+        		 * use property like "my:customProperty=cm:name"
+        		 */
+        		if(prop.getValue().indexOf(":") > -1) {
+        			properties.put(prop.getKey(), properties.get(prop.getValue()));
+        		} else {
+        			properties.put(prop.getKey(), prop.getValue());
+        		}
+        	}
+        }
+        /*
+         * Update type names, aspect names and property names.
+         * The input should be like the following
+         * my:aspectName=myapp:aspectName;my:oldProp=myapp:newProp
+         */
+        if(null != this.updateTypesOrAspectsOrProperties && !this.updateTypesOrAspectsOrProperties.isEmpty()) {
+        	if(this.updateTypesOrAspectsOrProperties.containsKey(type)) {
+        		type = updateTypesOrAspectsOrProperties.get(type);
+        	}
+        	aspects = getUpdatedAspects(aspects);
+    		properties = getUpdatedProperties(properties);
+        }
+        /*
+         * Update the model prefix for all existing types, aspects and properties
+         * Example: myold=mynew;oldprefix=newprefix
+         */
+        if(null != this.updateModelPrefix && !this.updateModelPrefix.isEmpty()) {
+        	for(Entry<String, String> prefixSet : this.updateModelPrefix.entrySet()) {
+        		if(type.startsWith(prefixSet.getKey())) {
+        			type = type.replaceFirst(prefixSet.getKey(), prefixSet.getValue());
+        		}
+        		aspects = getUpdatedPrefixAspects(aspects, prefixSet);
+        		properties = getUpdatedPrefixProperties(properties, prefixSet);
+        	}
+        }
+        // ZIA - END
 
         String header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE properties SYSTEM \"http://java.sun.com/dtd/properties.dtd\">\n<properties>";
         String footer = "\n</properties>";
@@ -244,7 +409,10 @@ public class FileFolder {
         for (String string : set) {
             String key = string;
             String value = properties.get(key);
-
+            
+            if(isInvalidEmptyType(key, value) || StringUtils.isEmpty(value)) {
+            	continue;
+            }
 
             value = this.formatProperty(value);
 
@@ -252,8 +420,18 @@ public class FileFolder {
             text += "\n\t<entry key=\"" + key + "\">" + value + "</entry>";
         }
 
-        try {
-            String fp = this.createXmlFile(filePath);
+        String validXMLText = text.replaceAll(XML10PATTERN, "");
+        if(!text.equals(validXMLText)) {
+        	String validateMsg = "VALIDATE: Stripped invalid XML characters....."+filePath;
+        	log.error(validateMsg);
+        	parentLogger.append(validateMsg);
+        	text = validXMLText;
+        }
+        
+        try 
+        {
+            //String fp = this.createXmlFile(filePath);
+   	    String fp = this.createXmlFile(filePath, revision);
             File file = new File(fp);
 
             BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), "UTF8"));
@@ -271,7 +449,67 @@ public class FileFolder {
 
     }
 
+	private Map<String, String> getUpdatedPrefixProperties(Map<String, String> properties, Entry<String, String> prefixSet) {
+		Map<String, String> newProperties = new HashMap<String, String>();
+		for(Entry<String, String> property : properties.entrySet()) {
+			if(property.getKey().startsWith(prefixSet.getKey())) {
+				newProperties.put(property.getKey().replaceFirst(prefixSet.getKey(), prefixSet.getValue()), property.getValue());
+			} else {
+				newProperties.put(property.getKey(), property.getValue());
+			}
+		}
+		if(null != properties) {
+			properties = newProperties;
+		}
+		return properties;
+	}
 
+	private List<String> getUpdatedPrefixAspects(List<String> aspects, Entry<String, String> prefixSet) {
+		List<String> newAspects = new ArrayList<String>();
+		for(String aspect : aspects) {
+			if(aspect.startsWith(prefixSet.getKey())) {
+				newAspects.add(aspect.replaceFirst(prefixSet.getKey(), prefixSet.getValue()));
+			} else {
+				newAspects.add(aspect);
+			}
+		}
+		if(null != aspects) {
+			aspects = newAspects;
+		}
+		return aspects;
+	}
+
+	private Map<String, String> getUpdatedProperties(Map<String, String> properties) {
+		Map<String, String> newProperties = new HashMap<String, String>();
+		for(Entry<String, String> property : properties.entrySet()) {
+			if(this.updateTypesOrAspectsOrProperties.containsKey(property.getKey())) {
+				newProperties.put(this.updateTypesOrAspectsOrProperties.get(property.getKey()), property.getValue());
+			} else {
+				newProperties.put(property.getKey(), property.getValue());
+			}
+		}
+		if(null != properties) {
+			properties = newProperties;
+		}
+		return properties;
+	}
+
+	private List<String> getUpdatedAspects(List<String> aspects) {
+		List<String> newAspects = new ArrayList<String>();
+		for(String aspect : aspects) {
+			if(this.updateTypesOrAspectsOrProperties.containsKey(aspect)) {
+				newAspects.add(this.updateTypesOrAspectsOrProperties.get(aspect));
+			} else {
+				newAspects.add(aspect);
+			}
+		}
+		if(null != aspects) {
+			aspects = newAspects;
+		}
+		return aspects;
+	}
+    
+    
     /**
      * Format aspects
      *
@@ -328,6 +566,55 @@ public class FileFolder {
 
         return false;
     }
-
-
+   
+    private boolean isInvalidEmptyType(String key, String value) {
+       	if(this.invalidEmptyProps.contains(key) && (null == value || value.isEmpty())) {
+        	return true;
+        }
+       	return false;
+    }
+    private void setInvalidTypeProperties(NodeRef nodeRef, String type, List<String> aspects) {
+    	if(this.processedTypesAndAspects.contains(type) && this.processedTypesAndAspects.containsAll(aspects)) {
+    		return;
+    	}
+        Map<QName, PropertyDefinition> props = new HashMap<QName, PropertyDefinition>();
+    	if(null != type && !type.isEmpty() && !this.processedTypesAndAspects.contains(type)) {
+        	props.putAll(serviceRegistry.getDictionaryService().getType(getQNameFromPrefixString(type)).getProperties());
+        	this.processedTypesAndAspects.add(type);
+    	}
+    	if(null != aspects && !aspects.isEmpty() && !this.processedTypesAndAspects.containsAll(aspects)) {
+    		for(String aspect: aspects) {
+	        	if(this.processedTypesAndAspects.contains(aspect)) {
+	        		continue;
+	        	}
+	        	props.putAll(serviceRegistry.getDictionaryService().getAspect(getQNameFromPrefixString(aspect)).getProperties());
+	        	this.processedTypesAndAspects.add(aspect);
+    		}
+    	}
+    	for(Entry<QName, PropertyDefinition> entry : props.entrySet()) {
+    		/*
+    		if(entry.getValue().getDataType().getName().equals(DataTypeDefinition.DATE) ||
+    				entry.getValue().getDataType().getName().equals(DataTypeDefinition.DATETIME) ||
+    				entry.getValue().getDataType().getName().equals(DataTypeDefinition.INT) ||
+    				entry.getValue().getDataType().getName().equals(DataTypeDefinition.FLOAT) ||
+    				entry.getValue().getDataType().getName().equals(DataTypeDefinition.LONG) ||
+    				entry.getValue().getDataType().getName().equals(DataTypeDefinition.DOUBLE)) {
+    			this.invalidEmptyProps.add(getQNameToPrefixString(entry.getKey()));
+    		}
+    		*/
+    		try {
+    			DefaultTypeConverter.INSTANCE.convert(entry.getValue().getDataType(), "");
+    		} catch (Exception e) {
+    			this.invalidEmptyProps.add(getQNameToPrefixString(entry.getKey()));
+    		}
+    	}
+    }
+    
+    private String getQNameToPrefixString(QName prop) {
+    	return prop.toPrefixString(this.serviceRegistry.getNamespaceService());
+    }
+    private QName getQNameFromPrefixString(String qnameStr) {
+    	return QName.createQName(qnameStr, this.serviceRegistry.getNamespaceService());
+    }
+    
 }
