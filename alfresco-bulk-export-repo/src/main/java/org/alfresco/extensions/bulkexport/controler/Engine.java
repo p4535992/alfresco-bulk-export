@@ -125,6 +125,7 @@ public class Engine {
 
     private List<NodeRef> getNodesToExport(NodeRef rootNode) throws Exception {
         List<NodeRef> nodes = null;
+        //totalNodesToExport.set(0);
         if (useNodeCache) {
             nodes = retrieveNodeListFromCache(rootNode);
         }
@@ -559,6 +560,32 @@ public class Engine {
    
     private int exportNodesVPrince(List<NodeRef> nodesToExport) throws Exception 
     {
+        ExecutorService threadPool = Executors.newFixedThreadPool(nbOfThreads);
+        List<Future<?>> futures = new ArrayList<>();
+
+        int previousLowerLimitNodeNumber = 0;
+        int noOfTasks = new Double(Math.ceil((double) nodesToExport.size() / (double) this.exportChunkSize)).intValue();
+
+        log.info("Number of tasks: " + noOfTasks);
+
+        for (int taskNumber = 1; taskNumber <= noOfTasks; taskNumber++) {
+            int upperLimitNodeNumber = calculateNextUpperLimitNodeNumber(previousLowerLimitNodeNumber, nodesToExport.size());
+            int lowerLimitNodeNumber = calculateNextLowerLimitNodeNumber(previousLowerLimitNodeNumber, upperLimitNodeNumber);
+            log.info("Task number" + taskNumber + " LowerLimitNodeNumber " + lowerLimitNodeNumber);
+            log.info("Task number" + taskNumber + " UpperLimitNodeNumber " + upperLimitNodeNumber);
+
+            previousLowerLimitNodeNumber = upperLimitNodeNumber;
+
+            List<NodeRef> nodesForCurrentThread = nodesToExport.subList(lowerLimitNodeNumber, upperLimitNodeNumber);
+            futures.add(threadPool.submit(new NodeExportTask(nodesForCurrentThread, exportVersions, revisionHead, dao, fileFolder, taskNumber)));
+        }
+
+        boolean exportTerminated = false;
+
+        for (Future<?> future : futures) {
+            exportTerminated &= future.isDone();
+        }
+        /*
         //final int NODES_TO_PROCESS = 100;
 
         //int logCount = nodesToExport.size();
@@ -600,6 +627,8 @@ public class Engine {
         }
         //return nodesToExport.size() - logCount;
         return nodesToExport.size() - availableNodesToExport.get();
+        */
+        return nodesToExport.size();
     }
 
     

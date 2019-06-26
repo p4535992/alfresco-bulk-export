@@ -82,6 +82,8 @@ public class FileFolder
      * exported or no 
      */
     private boolean scapeExported;
+
+    //MOD VPRINCE
     private ServiceRegistry serviceRegistry;
     private Set<String> invalidEmptyProps = new HashSet<String>();
     private Set<String> processedTypesAndAspects = new HashSet<String>();
@@ -90,6 +92,7 @@ public class FileFolder
     private Map<String, String> customProperties = null;
     private Map<String, String> updateTypesOrAspectsOrProperties = null;
     private Map<String, String> updateModelPrefix = null;
+    //END MOD VPRINCE
     
     /**
      * File Folder default builder

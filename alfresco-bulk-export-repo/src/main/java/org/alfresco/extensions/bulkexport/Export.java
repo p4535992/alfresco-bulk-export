@@ -51,8 +51,6 @@ import java.io.IOException;
  * 
  * @author Denys G. Santos (gsdenys@gmail.com)
  * @version 1.0.1
- */
-/**
  * Updated the class to handle injecting aspects, custom properties,
  * export by from and to dates and updating model prefixes.
  * 
@@ -84,9 +82,7 @@ public class Export extends DeclarativeWebScript //extends AbstractWebScript
      * @param res  The HTTP response parameter
      * @throws IOException
      */
-	//public void execute(WebScriptRequest req, WebScriptResponse res) throws IOException 
-    //public Map<String, Object> executeImpl(WebScriptRequest req, WebScriptResponse res) throws IOException 
-	protected Map<String, Object> executeImpl(WebScriptRequest req, Status status, Cache cache)
+    public Map<String, Object> executeImpl(WebScriptRequest req, Status status, Cache cache)
     {
         log.debug("execute");
         
@@ -286,7 +282,8 @@ public class Export extends DeclarativeWebScript //extends AbstractWebScript
     		return model;
         }	
     }
-	
+
+
     public ServiceRegistry getServiceRegistry() 
     {
         return serviceRegistry;

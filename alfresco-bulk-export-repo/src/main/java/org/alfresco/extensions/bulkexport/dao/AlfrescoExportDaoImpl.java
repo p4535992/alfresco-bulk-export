@@ -100,11 +100,12 @@ public class AlfrescoExportDaoImpl implements AlfrescoExportDao {
                     ContentModel.PROP_NODE_UUID,
                     ContentModel.PROP_CATEGORIES,
                     ContentModel.PROP_CONTENT,
+
                     ContentModel.ASPECT_TAGGABLE,
             ContentModel.PROP_VERSION_LABEL,
             QName.createQName(NamespaceService.CONTENT_MODEL_1_0_URI, VersionModel.PROP_VERSION_TYPE),
             QName.createQName(NamespaceService.CONTENT_MODEL_1_0_URI, "lastThumbnailModification")
-            };
+     };
 
     private String[] ignorePropertyPrefix =
             {
@@ -121,6 +122,7 @@ public class AlfrescoExportDaoImpl implements AlfrescoExportDao {
                     ActionModel.TYPE_COMPOSITE_ACTION,
                     PublishingModel.TYPE_PUBLISHING_QUEUE
             };
+
     private List<QName> ignoredAspects = Collections.unmodifiableList(
     	new ArrayList<QName>() {{
     		add(QName.createQName(NamespaceService.CONTENT_MODEL_1_0_URI, "thumbnailModification"));
