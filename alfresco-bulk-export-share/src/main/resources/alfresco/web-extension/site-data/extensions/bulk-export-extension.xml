@@ -3,7 +3,7 @@
         <module>
             <id>bulk-export-extension</id>
             <version>1.0</version>
-			<auto-deploy>true</auto-deploy>
+			<!--<auto-deploy>true</auto-deploy>--><auto-deploy>false</auto-deploy>
             <configurations>
                 
                 <config evaluator="string-compare" condition="DocumentLibrary">  
@@ -54,8 +54,8 @@
 
 				<config evaluator="string-compare" condition="DocLibCustom">
 					<dependencies>						
-						<css src="/bulk-export/bulk-export-action.css"/>
-						<js src="/bulk-export/bulk-export-action.js" />
+						<css src="/bulk-export/components/css/bulk-export-action.css"/>
+						<js src="/bulk-export/components/js/bulk-export-action.js" />
 					</dependencies>
 				</config>
             </configurations>

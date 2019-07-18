@@ -40,7 +40,7 @@ import java.io.IOException;
  */
 public class ExportOLD extends AbstractWebScript 
 {
-    Log log = LogFactory.getLog(Export.class);
+    Log log = LogFactory.getLog(ExportOLD.class);
 
     /** Alfresco {@link ServiceRegistry} populated by Spring Framework. */
     protected ServiceRegistry serviceRegistry;

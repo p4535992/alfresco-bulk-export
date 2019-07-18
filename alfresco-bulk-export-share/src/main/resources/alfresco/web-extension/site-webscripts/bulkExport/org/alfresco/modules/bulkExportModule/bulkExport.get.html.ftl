@@ -1,3 +1,6 @@
+<@link rel="stylesheet" type="text/css" href="${url.context}/res/bulk-export/components/css/bulk-export-action.css" />
+<@script type="text/javascript" src="${url.context}/res/bulk-export/components/js/bulk-export-action.js"></@script>
+
 <#assign el=args.htmlid?html>
 <div id="${el}-dialog" class="depot-casier">
    <div id="${el}-dialogTitle" class="hd"><#if displayName??>${msg("", displayName)}<#else>${msg("")}</#if></div>
