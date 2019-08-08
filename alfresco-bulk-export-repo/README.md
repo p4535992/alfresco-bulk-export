@@ -1,0 +1,1 @@
+https://www.slideshare.net/RichardMcKnight/bulk-export-tool-for-alfresco
